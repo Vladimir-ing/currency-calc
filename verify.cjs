@@ -12,6 +12,7 @@ function get(id) {
     value: id === 'amountFrom' ? '92500' : id === 'commission' ? '0' : id === 'commissionMode' ? 'percent' : '',
     listeners: {}, classList: { add() {}, remove() {} },
     setAttribute() {}, replaceChildren() { this.options = []; },
+    scrollIntoView() {},
     append(option) { this.options.push(option); },
     addEventListener(name, callback) { this.listeners[name] = callback; },
   });
@@ -62,4 +63,16 @@ assert.equal(get('amountFrom').value, '99,722.77');
 get('swap').listeners.click();
 assert.equal(get('currencyFrom').value, 'RUB');
 assert.equal(get('currencyTo').value, 'CNY');
-console.log('Проверки расчёта, офлайна, языка и обмена пройдены');
+assert.match(html, /id="quickCalc"/);
+get('amountTo').value = '1000';
+vm.runInContext('sendToCalculator()', context);
+assert.equal(get('calcDisplay').value, '1000');
+for (const key of ['+', '1', '.', '5', '%', '=']) vm.runInContext(`pressCalcKey(${JSON.stringify(key)})`, context);
+assert.equal(get('calcDisplay').value, '1015');
+for (const key of ['C','5','-','1','0','=','+','2','=']) vm.runInContext(`pressCalcKey(${JSON.stringify(key)})`, context);
+assert.equal(get('calcDisplay').value, '-3');
+const { parseRates } = require('./api/rates.js');
+const sampleXml = '<ValCurs Date="13.11.2026">' + ['CNY','USD','EUR','GBP','JPY','TRY','AED','KZT','BYN','GEL','THB'].map(code => `<Valute><CharCode>${code}</CharCode><Nominal>${code==='KZT'?100:1}</Nominal><Value>${code==='KZT'?'18,6573':'82,9803'}</Value></Valute>`).join('') + '</ValCurs>';
+assert.equal(parseRates(sampleXml).rates.KZT, 0.186573);
+assert.equal(parseRates(sampleXml).date, '2026-11-13');
+console.log('Проверки конвертации, комиссии, офлайна, перевода, калькулятора и XML ЦБ РФ пройдены');
